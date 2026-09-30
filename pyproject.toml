@@ -1,0 +1,58 @@
+[project]
+name = "cafeteria-api"
+version = "0.1.0"
+description = "Backend de cafetería con FastAPI"
+requires-python = ">=3.11"
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+extend-exclude = "(alembic/versions|\\.venv)"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["alembic/versions", ".venv"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle
+    "W",    # warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # bugbear
+    "C4",   # comprehensions
+    "UP",   # pyupgrade
+    "SIM",  # simplify
+    "RUF",  # ruff-specific
+    "ANN",  # anotaciones
+    "D",    # docstrings
+]
+ignore = [
+    "D100",  # módulo sin docstring
+    "D104",  # paquete sin docstring
+    "D203",
+    "D213",
+    "ANN401", # Any permitido en payloads dinámicos
+]
+
+[tool.ruff.lint.per-file-ignores]
+"app/tests/*" = ["D102", "D103", "ANN001", "ANN201", "S101"]
+"alembic/*" = ["D103", "ANN001", "ANN201"]
+"app/seed.py" = ["D103"]
+"app/cli.py" = ["ANN201"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["app/tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = "-q --strict-markers"
+markers = [
+    "integration: pruebas que requieren base de datos completa",
+]
+filterwarnings = ["error::DeprecationWarning:app.*"]
