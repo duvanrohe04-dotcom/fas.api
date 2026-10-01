@@ -24,5 +24,6 @@ COPY . .
 # Exponer el puerto
 EXPOSE 8000
 
-# Ejecutar Uvicorn
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Inicializa el esquema y el administrador antes de arrancar.
+# `exec` deja uvicorn como PID 1 para que reciba las señales de parada.
+CMD ["sh", "-c", "python -m app.scripts.init_db && exec uvicorn app.main:app --host 0.0.0.0 --port 8000"]

@@ -1,18 +1,42 @@
 services:
   api:
     build: .
-    container_name: cafeteria_api
     restart: unless-stopped
+
+    # El puerto publicado es configurable para evitar colisiones entre despliegues.
+    # Coolify enruta al contenedor por su proxy: si ya tienes otro servicio en 8000,
+    # define API_PORT con otro valor libre en el entorno.
     ports:
-      - "8000:8000"
+      - "${API_PORT:-8000}:8000"
+
     env_file:
       - .env
+
     environment:
       # Sobrescribe la base de datos para usar SQLite con volumen persistente en Docker
       - DATABASE_URL=sqlite:////app/data/cafeteria.db
       - SECRET_KEY=${SECRET_KEY}
+
+      # Administrador inicial. Solo se usa si la tabla de usuarios está vacía.
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
+      - ADMIN_FULL_NAME=${ADMIN_FULL_NAME:-Administrador}
+
     volumes:
       - cafeteria_data:/app/data
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
 volumes:
   cafeteria_data:
