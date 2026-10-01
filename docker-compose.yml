@@ -1,0 +1,18 @@
+services:
+  api:
+    build: .
+    container_name: cafeteria_api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      # Sobrescribe la base de datos para usar SQLite con volumen persistente en Docker
+      - DATABASE_URL=sqlite:////app/data/cafeteria.db
+      - SECRET_KEY=${SECRET_KEY}
+    volumes:
+      - cafeteria_data:/app/data
+
+volumes:
+  cafeteria_data:

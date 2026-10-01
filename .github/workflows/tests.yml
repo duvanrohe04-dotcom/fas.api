@@ -1,0 +1,151 @@
+name: Tests
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SECRET_KEY: ci-secret-key-not-for-production
+  DATABASE_URL: sqlite:///./test.db
+
+jobs:
+  ruff:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff==0.16.9
+      - name: Ejecutar ruff
+        run: ruff check app
+
+  black:
+    name: Formato (black)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install black==26.5.1
+      - name: Verificar formato
+        run: black --check app
+
+  pytest:
+    name: Tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        file:
+          - app/tests/test_auth.py
+          - app/tests/test_categories.py
+          - app/tests/test_products.py
+          - app/tests/test_tables.py
+          - app/tests/test_orders.py
+          - app/tests/test_payments.py
+          - app/tests/test_kitchen.py
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Preparar entorno
+        env:
+          SECRET_KEY: ci-secret-key-not-for-production
+          DATABASE_URL: sqlite:///./test.db
+        run: |
+          python -c "import app.main"
+
+      - name: Ejecutar tests
+        env:
+          SECRET_KEY: ci-secret-key-not-for-production
+          DATABASE_URL: sqlite:///./test.db
+        run: |
+          python -m pytest "${{ matrix.file }}" -v --tb=short
+
+  coverage:
+    name: Tests con cobertura
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Ejecutar suite completa con cobertura
+        env:
+          SECRET_KEY: ci-secret-key-not-for-production
+          DATABASE_URL: sqlite:///./test.db
+        run: |
+          python -m pytest app/tests \
+            --cov=app \
+            --cov-report=term-missing \
+            --cov-report=xml \
+            --cov-fail-under=85
+
+      - name: Subir informe de cobertura
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+          if-no-files-found: warn
+
+  import-check:
+    name: Import de la aplicación
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Verificar que app.main importa y expone el OpenAPI
+        env:
+          SECRET_KEY: ci-secret-key-not-for-production
+          DATABASE_URL: sqlite:///./test.db
+        run: |
+          python -c "
+          from app.main import app
+          paths = app.openapi()['paths']
+          print(f'{len(paths)} endpoints registrados')
+          assert '/health' in paths, 'falta /health'
+          assert '/api/v1/auth/login' in paths, 'falta /api/v1/auth/login'
+          "
