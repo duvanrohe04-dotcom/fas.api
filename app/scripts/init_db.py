@@ -27,6 +27,7 @@ from app.core.database import Base, SessionLocal, engine
 # Importar app.models registra todas las tablas en Base.metadata.
 from app.models import RoleEnum
 from app.schemas.auth import UserCreate
+from app.scripts.seed_demo import seed_demo_data
 from app.services.auth_service import create_user_if_empty
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -118,12 +119,30 @@ def create_initial_admin() -> None:
         session.close()
 
 
+def load_demo_data() -> None:
+    """Carga el menú de ejemplo si `SEED_DEMO_DATA` está activo y la base está vacía."""
+    if os.getenv("SEED_DEMO_DATA", "").strip().lower() not in {
+        "1",
+        "true",
+        "yes",
+        "si",
+    }:
+        return
+
+    session = SessionLocal()
+    try:
+        seed_demo_data(session)
+    finally:
+        session.close()
+
+
 def main() -> int:
     """Punto de entrada. Devuelve un código de salida para el contenedor."""
     try:
         wait_for_database()
         create_schema()
         create_initial_admin()
+        load_demo_data()
     except Exception:
         logger.exception("Fallo al inicializar la base de datos")
         return 1

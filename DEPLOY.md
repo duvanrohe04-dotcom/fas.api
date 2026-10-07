@@ -51,6 +51,19 @@ los siguientes reutilizan la caché de capas.
 - `https://cafe.midominio.com/` → tienda del cliente
 - `https://cafe.midominio.com/admin` → panel interno (entra con el admin)
 
+## Datos y redespliegues
+
+- La base (SQLite) vive en el volumen `cafeteria_data` (`/app/data`). Un
+  redespliegue **no** la toca: productos, pedidos y usuarios se conservan.
+  No borres el volumen ni la aplicación en Coolify, y no actives la opción de
+  eliminar volúmenes al redesplegar.
+- Si la base está vacía, el arranque carga un menú y 6 mesas de ejemplo
+  (`SEED_DEMO_DATA=true`, por defecto). Solo lo hace cuando no hay ninguna
+  categoría, producto ni mesa; nunca sobrescribe lo que ya existe.
+  Ponla en `false` si prefieres empezar sin datos.
+- Haz copias del volumen de vez en cuando (Coolify → Backups, o copia
+  `/app/data/cafeteria.db`).
+
 ## Antes de abrirlo al público
 
 - El pedido sin sesión (`POST /orders/public`) no tiene límite de intentos.

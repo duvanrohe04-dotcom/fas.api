@@ -21,6 +21,10 @@ services:
       # Ej.: https://cafe.midominio.com  (con `*` se permite cualquiera).
       - CORS_ORIGINS=${CORS_ORIGINS:-*}
 
+      # Carga el menú y las mesas de ejemplo SOLO si la base está vacía.
+      # Nunca borra ni sobrescribe datos existentes.
+      - SEED_DEMO_DATA=${SEED_DEMO_DATA:-true}
+
       # Administrador inicial. Solo se usa si la tabla de usuarios está vacía.
       - ADMIN_EMAIL=${ADMIN_EMAIL:-}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
