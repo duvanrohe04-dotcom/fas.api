@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../shared/formatters.dart';
@@ -26,7 +27,18 @@ class CustomerPage extends ConsumerWidget {
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1100),
-          child: CustomScrollView(
+          child: SafeArea(
+            bottom: false,
+            // Deslizar hacia abajo recarga el menú (útil en el celular).
+            child: RefreshIndicator(
+              onRefresh: () async {
+                ref
+                  ..invalidate(productsProvider)
+                  ..invalidate(categoriesProvider);
+                await ref.read(productsProvider.future);
+              },
+              child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
               const SliverToBoxAdapter(child: _Header()),
               const SliverToBoxAdapter(child: TrackingBanner()),
@@ -56,7 +68,18 @@ class CustomerPage extends ConsumerWidget {
                   );
                 },
               ),
+              SliverToBoxAdapter(
+                child: Center(
+                  child: TextButton(
+                    onPressed: () => context.go('/admin'),
+                    child: const Text('Acceso del personal'),
+                  ),
+                ),
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 16)),
             ],
+          ),
+            ),
           ),
         ),
       ),

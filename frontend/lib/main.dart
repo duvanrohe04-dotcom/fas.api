@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -11,6 +12,15 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // URLs limpias (/admin) en lugar de /#/admin.
   usePathUrlStrategy();
+  // Barra de estado transparente con iconos oscuros (Android).
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      systemNavigationBarColor: Color(0xFFFBF7F0),
+      systemNavigationBarIconBrightness: Brightness.dark,
+    ),
+  );
   final prefs = await SharedPreferences.getInstance();
   // Con la tipografía ya cargada, los textos se miden bien en el primer
   // fotograma (si no, chips y botones recortan su etiqueta).
