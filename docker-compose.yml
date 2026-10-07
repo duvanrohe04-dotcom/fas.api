@@ -42,5 +42,18 @@ services:
       retries: 3
       start_period: 10s
 
+  # Frontend (Flutter web servido con nginx, puerto interno 80).
+  # En Coolify aparece como un servicio más: asígnale su propio dominio.
+  web:
+    build:
+      context: ./frontend
+      args:
+        # URL pública del backend, ej. https://api.midominio.com/api/v1
+        # Se incrusta al compilar: si cambia, hay que volver a desplegar.
+        API_BASE_URL: ${API_BASE_URL}
+    restart: unless-stopped
+    expose:
+      - "80"
+
 volumes:
   cafeteria_data:

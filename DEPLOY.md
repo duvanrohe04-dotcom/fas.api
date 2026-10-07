@@ -20,7 +20,22 @@ Variables de entorno (Coolify → Environment Variables):
 > Si dejas `CORS_ORIGINS` vacío o en `*`, cualquier web puede llamar a la API.
 > En producción pon el dominio exacto del frontend (sin barra final).
 
-## 2. Frontend (aplicación nueva)
+## 2. Frontend
+
+### Opción A (recomendada): en la misma aplicación del backend
+
+`docker-compose.yml` ya incluye el servicio `web` (el frontend). Al volver a
+desplegar, Coolify muestra un campo de dominio **por cada servicio**:
+
+1. En la aplicación, añade la variable `API_BASE_URL` =
+   `https://api.midominio.com/api/v1` (URL pública del backend + `/api/v1`).
+2. *Reload Compose File* / guardar, para que aparezca el servicio `web`.
+3. En **Domains for web** pon el dominio del frontend con el puerto interno:
+   `https://cafe.midominio.com:80`.
+4. En **Domains for api** deja el del backend con su puerto (`:8000`).
+5. Despliega.
+
+### Opción B: aplicación aparte
 
 1. Coolify → *New Resource* → mismo repositorio.
 2. **Build Pack**: `Dockerfile`.
