@@ -11,9 +11,19 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str
 
+    #: Orígenes permitidos por CORS, separados por comas. `*` permite todos
+    #: (útil en desarrollo; en producción indica el dominio del frontend).
+    CORS_ORIGINS: str = "*"
+
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", case_sensitive=True, extra="ignore"
     )
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        """Lista de orígenes CORS ya separada y sin espacios ni barras finales."""
+        origins = [o.strip().rstrip("/") for o in self.CORS_ORIGINS.split(",")]
+        return [o for o in origins if o] or ["*"]
 
 
 settings = Settings()

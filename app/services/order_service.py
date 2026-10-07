@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import secrets
+from datetime import UTC, datetime
 from typing import ClassVar
+from zoneinfo import ZoneInfo
 
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import BadRequestException, NotFoundException
-from app.models import Order, OrderStatus, Product, Table, TableStatus
+from app.models import Order, OrderStatus, Payment, Product, Table, TableStatus
 from app.repositories.order_repository import OrderRepository
 from app.repositories.payment_repository import PaymentRepository
 from app.repositories.table_repository import TableRepository
@@ -14,8 +18,12 @@ from app.schemas.order import (
     OrderCreate,
     OrderItemCreate,
     OrderRead,
+    OrdersSummary,
     OrderStatusUpdate,
 )
+
+#: Zona horaria del negocio (Colombia, sin horario de verano).
+BUSINESS_TZ = ZoneInfo("America/Bogota")
 
 
 class OrderService:
@@ -49,6 +57,50 @@ class OrderService:
         if order is None:
             raise NotFoundException("Pedido no encontrado")
         return order
+
+    def track(self, code: str) -> Order:
+        """Devuelve un pedido por su código público o lanza `NotFoundException`."""
+        order = self.orders.get_by_tracking_code(code.strip().upper())
+        if order is None:
+            raise NotFoundException("Pedido no encontrado")
+        return order
+
+    def summary(self) -> OrdersSummary:
+        """Calcula el resumen del día en la zona horaria de la cafetería."""
+        local_midnight = datetime.now(BUSINESS_TZ).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+        start = local_midnight.astimezone(UTC)
+
+        def count(*conditions: object) -> int:
+            return self.session.execute(
+                select(func.count()).select_from(Order).where(*conditions)
+            ).scalar_one()
+
+        sales = self.session.execute(
+            select(func.coalesce(func.sum(Payment.amount), 0.0)).where(
+                Payment.created_at >= start
+            )
+        ).scalar_one()
+
+        return OrdersSummary(
+            pending=count(Order.status == OrderStatus.PENDING),
+            active=count(
+                Order.status.in_(
+                    [OrderStatus.PENDING, OrderStatus.PREPARING, OrderStatus.READY]
+                )
+            ),
+            orders_today=count(
+                Order.created_at >= start, Order.status != OrderStatus.CANCELLED
+            ),
+            sales_today=round(float(sales), 2),
+            awaiting_payment=self.session.execute(
+                select(func.count())
+                .select_from(Order)
+                .outerjoin(Payment, Payment.order_id == Order.id)
+                .where(Order.status == OrderStatus.DELIVERED, Payment.id.is_(None))
+            ).scalar_one(),
+        )
 
     def _get_products(self, items: list[OrderItemCreate]) -> list[tuple[Product, int]]:
         """Valida las líneas y devuelve los productos con su cantidad acumulada."""
@@ -86,7 +138,14 @@ class OrderService:
                     f"Stock insuficiente de {product.name}: quedan {product.stock}"
                 )
 
-        order = self.orders.create(table_id=data.table_id, waiter_id=waiter_id)
+        order = self.orders.create(
+            table_id=data.table_id,
+            waiter_id=waiter_id,
+            order_type=data.order_type,
+            customer_name=data.customer_name,
+            notes=data.notes,
+            tracking_code=secrets.token_hex(4).upper(),
+        )
 
         for product, quantity in products:
             product.stock -= quantity

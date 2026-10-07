@@ -17,6 +17,10 @@ services:
       - DATABASE_URL=sqlite:////app/data/cafeteria.db
       - SECRET_KEY=${SECRET_KEY}
 
+      # Dominio(s) del frontend permitidos por CORS, separados por comas.
+      # Ej.: https://cafe.midominio.com  (con `*` se permite cualquiera).
+      - CORS_ORIGINS=${CORS_ORIGINS:-*}
+
       # Administrador inicial. Solo se usa si la tabla de usuarios está vacía.
       - ADMIN_EMAIL=${ADMIN_EMAIL:-}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}

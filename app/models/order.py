@@ -1,7 +1,7 @@
 import enum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Enum, Float, ForeignKey, Integer
+from sqlalchemy import Enum, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -31,6 +31,13 @@ class Order(Base, TimestampMixin):
         Enum(OrderStatus), default=OrderStatus.PENDING, nullable=False
     )
 
+    # "mesa" (se sirve en una mesa) o "llevar" (se recoge en el mostrador).
+    order_type: Mapped[str | None] = mapped_column(String(10))
+    customer_name: Mapped[str | None] = mapped_column(String(100))
+    notes: Mapped[str | None] = mapped_column(String(300))
+    # Código aleatorio con el que el cliente consulta su pedido sin sesión.
+    tracking_code: Mapped[str | None] = mapped_column(String(12), index=True)
+
     table_id: Mapped[int | None] = mapped_column(ForeignKey("tables.id"))
     waiter_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
 
@@ -42,6 +49,16 @@ class Order(Base, TimestampMixin):
     payment: Mapped["Payment"] = relationship(
         "Payment", back_populates="order", uselist=False
     )
+
+    @property
+    def table_number(self) -> int | None:
+        """Número visible de la mesa, si el pedido es para una mesa."""
+        return self.table.number if self.table is not None else None
+
+    @property
+    def is_paid(self) -> bool:
+        """Indica si el pedido ya tiene un pago registrado."""
+        return self.payment is not None
 
 
 class OrderItem(Base, TimestampMixin):

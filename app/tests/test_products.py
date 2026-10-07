@@ -26,9 +26,9 @@ def _crear_producto(client: TestClient, headers: dict[str, str], **overrides):
     return client.post("/api/v1/products", headers=headers, json=payload)
 
 
-def test_listar_requiere_token(client: TestClient) -> None:
-    """El listado de productos requiere autenticación."""
-    assert client.get("/api/v1/products").status_code == 401
+def test_listar_es_publico(client: TestClient) -> None:
+    """El listado de productos es público (menú del cliente)."""
+    assert client.get("/api/v1/products").status_code == 200
 
 
 def test_crear_producto(

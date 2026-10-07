@@ -9,7 +9,9 @@ from app.schemas.order import (
     OrderCreate,
     OrderItemsAdd,
     OrderRead,
+    OrdersSummary,
     OrderStatusUpdate,
+    OrderTrackRead,
     PaymentCreate,
     PaymentRead,
 )
@@ -52,6 +54,30 @@ def list_orders(
     )
 
 
+@router.get(
+    "/summary",
+    response_model=OrdersSummary,
+    summary="Resumen del día (admin o cajero)",
+)
+def orders_summary(service: OrderServiceDep, _: StaffUser) -> OrdersSummary:
+    """
+    Pedidos activos, pedidos y ventas de hoy, y pedidos pendientes de cobro.
+    """
+    return service.summary()
+
+
+@router.get(
+    "/track/{code}",
+    response_model=OrderTrackRead,
+    summary="Seguir un pedido con su código (público)",
+)
+def track_order(code: str, service: OrderServiceDep) -> OrderTrackRead:
+    """
+    Permite al cliente consultar el estado de su pedido con el código recibido.
+    """
+    return OrderTrackRead.model_validate(service.track(code))
+
+
 @router.get("/{order_id}", response_model=OrderRead, summary="Ver un pedido")
 def get_order(order_id: int, service: OrderServiceDep, _: CurrentUser) -> OrderRead:
     """
@@ -73,6 +99,19 @@ def create_order(
     Crea un pedido, descuenta el stock y ocupa la mesa si se indica.
     """
     return OrderRead.model_validate(service.create(payload, waiter_id=current_user.id))
+
+
+@router.post(
+    "/public",
+    response_model=OrderRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Crear pedido como cliente (sin sesión)",
+)
+def create_public_order(payload: OrderCreate, service: OrderServiceDep) -> OrderRead:
+    """
+    Permite a un cliente hacer un pedido desde la web sin iniciar sesión.
+    """
+    return OrderRead.model_validate(service.create(payload))
 
 
 @router.post("/{order_id}/items", response_model=OrderRead, summary="Añadir productos")

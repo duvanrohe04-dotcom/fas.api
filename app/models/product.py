@@ -19,6 +19,7 @@ class Product(Base, TimestampMixin):
     )
     description: Mapped[str | None] = mapped_column(Text)
     price: Mapped[float] = mapped_column(Float, nullable=False)
+    image_url: Mapped[str | None] = mapped_column(String(500))
     stock: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 

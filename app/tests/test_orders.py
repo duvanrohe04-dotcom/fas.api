@@ -380,3 +380,140 @@ def test_pedido_inexistente(client: TestClient, waiter_headers: dict[str, str]) 
     response = client.get("/api/v1/orders/9999", headers=waiter_headers)
 
     assert response.status_code == 404
+
+
+def test_cliente_crea_pedido_publico_sin_sesion(
+    client: TestClient, producto: Product, session: Session
+):
+    respuesta = client.post(
+        "/api/v1/orders/public",
+        json={"items": [{"product_id": producto.id, "quantity": 2}]},
+    )
+
+    assert respuesta.status_code == 201, respuesta.text
+    assert respuesta.json()["waiter_id"] is None
+    session.refresh(producto)
+    assert producto.stock == 18
+
+
+def test_menu_publico_sin_sesion(client: TestClient, producto: Product):
+    assert client.get("/api/v1/products").status_code == 200
+    assert client.get("/api/v1/categories").status_code == 200
+
+
+def test_pedido_publico_en_mesa_guarda_datos_y_codigo(
+    client: TestClient, producto: Product, mesa: Table
+):
+    respuesta = client.post(
+        "/api/v1/orders/public",
+        json={
+            "order_type": "mesa",
+            "table_id": mesa.id,
+            "customer_name": "  Laura  ",
+            "notes": "Sin azúcar",
+            "items": [{"product_id": producto.id, "quantity": 1}],
+        },
+    )
+
+    assert respuesta.status_code == 201, respuesta.text
+    cuerpo = respuesta.json()
+    assert cuerpo["order_type"] == "mesa"
+    assert cuerpo["table_number"] == mesa.number
+    assert cuerpo["customer_name"] == "Laura"
+    assert cuerpo["notes"] == "Sin azúcar"
+    assert len(cuerpo["tracking_code"]) == 8
+    assert cuerpo["is_paid"] is False
+
+
+def test_pedido_en_mesa_exige_mesa(client: TestClient, producto: Product):
+    respuesta = client.post(
+        "/api/v1/orders/public",
+        json={
+            "order_type": "mesa",
+            "items": [{"product_id": producto.id, "quantity": 1}],
+        },
+    )
+
+    assert respuesta.status_code == 422
+
+
+def test_pedido_para_llevar_ignora_la_mesa(
+    client: TestClient, producto: Product, mesa: Table
+):
+    respuesta = client.post(
+        "/api/v1/orders/public",
+        json={
+            "order_type": "llevar",
+            "table_id": mesa.id,
+            "items": [{"product_id": producto.id, "quantity": 1}],
+        },
+    )
+
+    assert respuesta.status_code == 201
+    assert respuesta.json()["table_id"] is None
+    assert respuesta.json()["order_type"] == "llevar"
+
+
+def test_seguimiento_publico_por_codigo(client: TestClient, producto: Product):
+    creado = client.post(
+        "/api/v1/orders/public",
+        json={"items": [{"product_id": producto.id, "quantity": 1}]},
+    ).json()
+
+    respuesta = client.get(f"/api/v1/orders/track/{creado['tracking_code'].lower()}")
+
+    assert respuesta.status_code == 200
+    assert respuesta.json()["status"] == "pendiente"
+    assert "tracking_code" not in respuesta.json()
+    assert client.get("/api/v1/orders/track/NOEXISTE").status_code == 404
+
+
+def test_listar_mesas_publico(client: TestClient, mesa: Table):
+    respuesta = client.get("/api/v1/tables/public")
+
+    assert respuesta.status_code == 200
+    assert [m["number"] for m in respuesta.json()] == [mesa.number]
+
+
+def test_resumen_del_dia(
+    client: TestClient, auth_header: dict[str, str], producto: Product
+):
+    creado = client.post(
+        "/api/v1/orders/public",
+        json={"items": [{"product_id": producto.id, "quantity": 2}]},
+    ).json()
+
+    resumen = client.get("/api/v1/orders/summary", headers=auth_header).json()
+    assert resumen["pending"] == 1
+    assert resumen["active"] == 1
+    assert resumen["orders_today"] == 1
+    assert resumen["sales_today"] == 0
+
+    for estado in ("preparando", "listo", "entregado"):
+        assert (
+            client.patch(
+                f"/api/v1/orders/{creado['id']}/status",
+                headers=auth_header,
+                json={"status": estado},
+            ).status_code
+            == 200
+        )
+    assert (
+        client.get("/api/v1/orders/summary", headers=auth_header).json()[
+            "awaiting_payment"
+        ]
+        == 1
+    )
+
+    client.post(
+        f"/api/v1/orders/{creado['id']}/pay",
+        headers=auth_header,
+        json={"method": "efectivo", "amount": creado["total_amount"]},
+    )
+    resumen = client.get("/api/v1/orders/summary", headers=auth_header).json()
+    assert resumen["sales_today"] == creado["total_amount"]
+    assert resumen["awaiting_payment"] == 0
+
+
+def test_resumen_requiere_personal(client: TestClient):
+    assert client.get("/api/v1/orders/summary").status_code == 401

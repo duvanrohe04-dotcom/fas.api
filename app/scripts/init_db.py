@@ -19,6 +19,7 @@ import os
 import sys
 import time
 
+from sqlalchemy import inspect, text
 from sqlalchemy.exc import OperationalError
 
 from app.core.database import Base, SessionLocal, engine
@@ -54,7 +55,35 @@ def wait_for_database() -> None:
 def create_schema() -> None:
     """Crea las tablas que falten. No modifica las existentes."""
     Base.metadata.create_all(bind=engine)
+    add_missing_columns()
     logger.info("Esquema verificado (%s tablas)", len(Base.metadata.tables))
+
+
+def add_missing_columns() -> None:
+    """Añade columnas nuevas (nullable) a tablas ya existentes.
+
+    `create_all` no altera tablas creadas antes de que existiera la columna.
+    Solo cubre columnas opcionales; cambios mayores requieren Alembic.
+    """
+    inspector = inspect(engine)
+    for table in Base.metadata.sorted_tables:
+        existing = {col["name"] for col in inspector.get_columns(table.name)}
+        for column in table.columns:
+            if column.name in existing or not column.nullable:
+                continue
+            column_type = column.type.compile(dialect=engine.dialect)
+            with engine.begin() as conn:
+                conn.execute(
+                    text(
+                        f'ALTER TABLE "{table.name}" '
+                        f'ADD COLUMN "{column.name}" {column_type}'
+                    )
+                )
+            logger.info("Columna añadida: %s.%s", table.name, column.name)
+
+        # `create_all` tampoco crea los índices de tablas que ya existían.
+        for index in table.indexes:
+            index.create(bind=engine, checkfirst=True)
 
 
 def create_initial_admin() -> None:

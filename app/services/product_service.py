@@ -38,6 +38,7 @@ class ProductService:
             name=data.name,
             description=data.description,
             price=data.price,
+            image_url=data.image_url,
             stock=data.stock,
             category_id=data.category_id,
         )
@@ -79,6 +80,7 @@ class ProductService:
             name=data.name.strip() if data.name else None,
             description=data.description,
             price=data.price,
+            image_url=data.image_url,
             stock=data.stock,
             category_id=data.category_id,
             is_active=data.is_active,

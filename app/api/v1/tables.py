@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Query, status
 
 from app.api.deps import AdminUser, CurrentUser, DbSession, StaffUser
 from app.models import TableStatus
-from app.schemas.common import Page, PaginationDep
+from app.schemas.common import MAX_PAGE_SIZE, Page, Pagination, PaginationDep
 from app.schemas.table import TableCreate, TableRead, TableUpdate
 from app.services.table_service import TableService
 
@@ -36,6 +36,19 @@ def list_tables(
     Devuelve una página de mesas ordenadas por número.
     """
     return service.list(pagination, status=table_status, min_capacity=min_capacity)
+
+
+@router.get(
+    "/public",
+    response_model=list[TableRead],
+    summary="Mesas disponibles para elegir (público)",
+)
+def list_public_tables(service: TableServiceDep) -> list[TableRead]:
+    """
+    Lista las mesas por número para que el cliente indique dónde está sentado.
+    """
+    page = service.list(Pagination(page=1, size=MAX_PAGE_SIZE))
+    return list(page.items)
 
 
 @router.get("/{table_id}", response_model=TableRead, summary="Ver una mesa")

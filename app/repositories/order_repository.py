@@ -90,9 +90,32 @@ class OrderRepository:
         self.session.flush()
         return item
 
-    def create(self, *, table_id: int | None, waiter_id: int | None) -> Order:
+    def get_by_tracking_code(self, code: str) -> Order | None:
+        """Devuelve un pedido por su código de seguimiento público."""
+        return self.session.execute(
+            self._with_relations(select(Order).where(Order.tracking_code == code))
+        ).scalar_one_or_none()
+
+    def create(
+        self,
+        *,
+        table_id: int | None,
+        waiter_id: int | None,
+        order_type: str | None = None,
+        customer_name: str | None = None,
+        notes: str | None = None,
+        tracking_code: str | None = None,
+    ) -> Order:
         """Persiste un nuevo pedido vacío y lo devuelve."""
-        order = Order(table_id=table_id, waiter_id=waiter_id, total_amount=0.0)
+        order = Order(
+            table_id=table_id,
+            waiter_id=waiter_id,
+            total_amount=0.0,
+            order_type=order_type,
+            customer_name=customer_name,
+            notes=notes,
+            tracking_code=tracking_code,
+        )
         self.session.add(order)
         self.session.flush()
         return order

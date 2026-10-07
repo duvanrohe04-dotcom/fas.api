@@ -4,10 +4,9 @@ from sqlalchemy.orm import Session
 from app.models import Category
 
 
-def test_listar_requiere_admin(client: TestClient, auth_header: dict[str, str]) -> None:
-    """El listado de categorías requiere token."""
-    assert client.get("/api/v1/categories").status_code == 401
-    assert client.get("/api/v1/categories", headers=auth_header).status_code == 200
+def test_listar_es_publico(client: TestClient) -> None:
+    """El listado de categorías es público (menú del cliente)."""
+    assert client.get("/api/v1/categories").status_code == 200
 
 
 def test_crear_categoria(client: TestClient, auth_header: dict[str, str]) -> None:

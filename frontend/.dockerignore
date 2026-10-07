@@ -1,0 +1,10 @@
+.dart_tool/
+build/
+.git
+.gitignore
+.idea
+.vscode
+Dockerfile
+.dockerignore
+tool/
+test/

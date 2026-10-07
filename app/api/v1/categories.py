@@ -18,9 +18,11 @@ def get_category_service(session: DbSession) -> CategoryService:
 CategoryServiceDep = Annotated[CategoryService, Depends(get_category_service)]
 
 
-@router.get("", response_model=Page[CategoryRead], summary="Listar categorías")
+@router.get(
+    "", response_model=Page[CategoryRead], summary="Listar categorías (público)"
+)
 def list_categories(
-    pagination: PaginationDep, service: CategoryServiceDep, _: CurrentUser
+    pagination: PaginationDep, service: CategoryServiceDep
 ) -> Page[CategoryRead]:
     """
     Devuelve una página de categorías ordenadas alfabéticamente.

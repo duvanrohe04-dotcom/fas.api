@@ -23,11 +23,10 @@ def get_product_service(session: DbSession) -> ProductService:
 ProductServiceDep = Annotated[ProductService, Depends(get_product_service)]
 
 
-@router.get("", response_model=Page[ProductRead], summary="Listar productos")
+@router.get("", response_model=Page[ProductRead], summary="Listar productos (público)")
 def list_products(
     pagination: PaginationDep,
     service: ProductServiceDep,
-    _: CurrentUser,
     category_id: Annotated[
         int | None, Query(description="Filtra por categoría.")
     ] = None,

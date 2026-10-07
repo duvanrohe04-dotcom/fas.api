@@ -77,12 +77,14 @@ class ProductRepository:
         price: float,
         stock: int,
         category_id: int,
+        image_url: str | None = None,
     ) -> Product:
         """Persiste un nuevo producto y lo devuelve."""
         product = Product(
             name=name.strip(),
             description=description,
             price=price,
+            image_url=image_url,
             stock=stock,
             category_id=category_id,
         )
