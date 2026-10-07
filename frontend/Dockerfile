@@ -2,8 +2,9 @@
 FROM debian:bookworm-slim AS build
 
 ARG FLUTTER_VERSION=3.47.6
-# URL pública de la API (el backend ya desplegado), ej. https://api.midominio.com/api/v1
-ARG API_BASE_URL
+# URL pública de la API (backend ya desplegado). Se puede sobrescribir en Coolify
+# con la variable de build API_BASE_URL.
+ARG API_BASE_URL=https://fastapi.sbs.mom/api/v1
 ENV PUB_CACHE=/root/.pub-cache
 
 RUN apt-get update \
@@ -24,9 +25,11 @@ COPY pubspec.yaml pubspec.lock* ./
 RUN flutter pub get
 
 COPY . .
-RUN test -n "$API_BASE_URL" || (echo "ERROR: define API_BASE_URL (build arg)" && exit 1)
-RUN flutter build web --release --no-wasm-dry-run \
-    --dart-define=API_BASE_URL=${API_BASE_URL}
+# Si la variable llega vacía se usa el valor por defecto de arriba.
+RUN API_URL="${API_BASE_URL:-https://fastapi.sbs.mom/api/v1}" \
+    && echo "Compilando con API_BASE_URL=${API_URL}" \
+    && flutter build web --release --no-wasm-dry-run \
+       --dart-define=API_BASE_URL="${API_URL}"
 
 # ---- Etapa 2: servir con nginx ----------------------------------------------
 FROM nginx:1.27-alpine
