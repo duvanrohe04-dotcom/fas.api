@@ -22,20 +22,10 @@ Variables de entorno (Coolify → Environment Variables):
 
 ## 2. Frontend
 
-### Opción A (recomendada): en la misma aplicación del backend
-
-`docker-compose.yml` ya incluye el servicio `web` (el frontend). Al volver a
-desplegar, Coolify muestra un campo de dominio **por cada servicio**:
-
-1. En la aplicación, añade la variable `API_BASE_URL` =
-   `https://api.midominio.com/api/v1` (URL pública del backend + `/api/v1`).
-2. *Reload Compose File* / guardar, para que aparezca el servicio `web`.
-3. En **Domains for web** pon el dominio del frontend con el puerto interno:
-   `https://cafe.midominio.com:80`.
-4. En **Domains for api** deja el del backend con su puerto (`:8000`).
-5. Despliega.
-
-### Opción B: aplicación aparte
+La app del frontend es **otra aplicación de Coolify** (no va dentro del
+`docker-compose.yml` del backend). Así el backend no se toca y cada una tiene
+su propio campo de dominio.
+### Pasos
 
 1. Coolify → *New Resource* → mismo repositorio.
 2. **Build Pack**: `Dockerfile`.
