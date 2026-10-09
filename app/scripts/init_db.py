@@ -19,6 +19,7 @@ import os
 import sys
 import time
 
+from pydantic import ValidationError
 from sqlalchemy import inspect, text
 from sqlalchemy.exc import OperationalError
 
@@ -101,15 +102,27 @@ def create_initial_admin() -> None:
             )
             return
 
-        user = create_user_if_empty(
-            session,
-            UserCreate(
+        try:
+            data = UserCreate(
                 email=email,
                 password=password,
                 full_name=os.getenv("ADMIN_FULL_NAME", "Administrador"),
                 role=RoleEnum.ADMIN,
-            ),
-        )
+            )
+        except ValidationError as exc:
+            # Un dato inválido del administrador no debe impedir que la API arranque.
+            problems = "; ".join(
+                f"{'.'.join(map(str, e['loc']))}: {e['msg']}" for e in exc.errors()
+            )
+            logger.error(
+                "ADMIN_EMAIL/ADMIN_PASSWORD no son válidos (%s). No se crea el "
+                "administrador; corrígelos (la clave necesita 8 caracteres o más) "
+                "o usa: python -m app.scripts.create_admin",
+                problems,
+            )
+            return
+
+        user = create_user_if_empty(session, data)
 
         if user is None:
             logger.info("Ya existen usuarios: no se crea el administrador inicial.")

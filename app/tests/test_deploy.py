@@ -36,6 +36,19 @@ def test_init_db_actualiza_una_base_antigua(tmp_path: Path, monkeypatch):
     assert "tracking_code" in indexed
 
 
+def test_clave_de_admin_invalida_no_impide_arrancar(session, monkeypatch, caplog):
+    """Una ADMIN_PASSWORD corta se registra como error pero no detiene el arranque."""
+    monkeypatch.setattr(init_db, "SessionLocal", lambda: session)
+    monkeypatch.setenv("ADMIN_EMAIL", "dueno@cafe.com")
+    monkeypatch.setenv("ADMIN_PASSWORD", "12345")
+
+    with caplog.at_level("ERROR", logger="init_db"):
+        init_db.create_initial_admin()
+
+    assert "no son válidos" in caplog.text
+    assert "8 caracteres" in caplog.text
+
+
 @pytest.mark.parametrize(
     ("raw", "expected"),
     [
