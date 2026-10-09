@@ -186,6 +186,39 @@ jobs:
           path: frontend/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
 
+  windows-app:
+    name: App de Windows
+    runs-on: windows-latest
+    needs: frontend
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.6"
+          channel: stable
+          cache: true
+
+      - name: Instalar dependencias
+        run: flutter pub get
+
+      - name: Compilar (release)
+        run: flutter build windows --release --dart-define=API_BASE_URL=https://fastapi.sbs.mom/api/v1
+
+      - name: Comprimir
+        shell: pwsh
+        run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath origen-cafe-windows.zip
+
+      - name: Subir
+        uses: actions/upload-artifact@v4
+        with:
+          name: origen-cafe-windows
+          path: frontend/origen-cafe-windows.zip
+          if-no-files-found: error
+
   docker-backend:
     name: Imagen Docker del backend
     runs-on: ubuntu-latest

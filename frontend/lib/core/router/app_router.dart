@@ -14,8 +14,11 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.listen(authControllerProvider, (_, __) => refresh.value++);
   ref.onDispose(refresh.dispose);
 
+  // La app de Windows es el puesto del personal: abre directo en /admin.
+  final isWindowsApp = !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
+
   return GoRouter(
-    initialLocation: '/',
+    initialLocation: isWindowsApp ? '/admin' : '/',
     refreshListenable: refresh,
     redirect: (context, state) {
       final path = state.matchedLocation;
